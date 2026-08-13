@@ -2,7 +2,7 @@
 
 MF64 CFW WebMIDI Editor & WebUSB Firmware Updater
 
-**WebMIDI editor and WebUSB firmware updater for MF64 CFW.**
+WebMIDI editor and WebUSB firmware updater for MF64 CFW.**
 
 ---
 
