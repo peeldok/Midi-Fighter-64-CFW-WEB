@@ -13,7 +13,9 @@
     PALETTE_DOWNLOAD: 0x12,
     PALETTE_DATA: 0x13
   };
-  const PROTOCOL_VERSION = 1;
+  const PROTOCOL_VERSION = 2;
+  const PROTOCOL_VERSION_MIN = 1;
+  const CAP_PALETTE_6BIT = 0x04;
   const PALETTE_SIZE = 128;
   const BOOTLOADER_SYSEX = [0xF0, 0x00, 0x01, 0x79, 0x03, 0x01, 0xF7];
   const IDENTITY_INQUIRY = [0xF0, 0x7E, 0x7F, 0x06, 0x01, 0xF7];
@@ -44,6 +46,8 @@
   let legacyConfigProbeOutput = null;
   let legacyConfigProbeResolve = null;
   let detectedFirmwareType = null;
+  let mf64ProtocolVersion = 0;
+  let mf64Capabilities = 0;
   let discoveryPromise = null;
   let discoveryRequested = false;
   let discoveryTimer = null;
@@ -129,6 +133,20 @@
 
   function decode8(msb, lsb) {
     return ((msb & 0x01) << 7) | (lsb & 0x7F);
+  }
+
+  function compress8To6(value) {
+    value = Math.max(0, Math.min(255, Number(value) || 0));
+    return (value >> 2) & 0x3F;
+  }
+
+  function expand6To8(value) {
+    value = Number(value) & 0x3F;
+    return ((value << 2) | (value >> 4)) & 0xFF;
+  }
+
+  function uses6BitPaletteProtocol() {
+    return mf64ProtocolVersion >= 2 && (mf64Capabilities & CAP_PALETTE_6BIT) !== 0;
   }
 
   async function setupMidi() {
@@ -313,6 +331,8 @@
     mf64Input = null;
     bootMidiOutput = null;
     detectedFirmwareType = null;
+    mf64ProtocolVersion = 0;
+    mf64Capabilities = 0;
     pendingDiscoveries.clear();
     setDeviceControlsVisible(false);
     setDeviceStatus("Searching for device…");
@@ -397,13 +417,15 @@
     if (command === CMD.DISCOVER_REPLY && data.length >= 14) {
       const token = data[7];
       const protocol = data[8];
-      if (protocol !== PROTOCOL_VERSION) return;
+      if (protocol < PROTOCOL_VERSION_MIN || protocol > PROTOCOL_VERSION) return;
       const output = pendingDiscoveries.get(token);
       if (!output) return;
       mf64Output = output;
       bootMidiOutput = output;
       mf64Input = event.currentTarget;
       detectedFirmwareType = "cfw";
+      mf64ProtocolVersion = protocol;
+      mf64Capabilities = data.length > 12 ? data[12] : 0;
       identityProbeOutput = null;
       identityProbeResolve = null;
       legacyConfigProbeOutput = null;
@@ -432,12 +454,20 @@
       return;
     }
 
-    if (command === CMD.PALETTE_DATA && data.length === 265) {
+    if (command === CMD.PALETTE_DATA) {
       const component = data[7];
       const pending = pendingPaletteReads.get(component);
       if (!pending) return;
+
       const values = [];
-      for (let i = 0; i < PALETTE_SIZE; i++) values.push(decode8(data[8 + i * 2], data[9 + i * 2]));
+      if (uses6BitPaletteProtocol() && data.length === 137) {
+        for (let i = 0; i < PALETTE_SIZE; i++) values.push(expand6To8(data[8 + i]));
+      } else if (!uses6BitPaletteProtocol() && data.length === 265) {
+        for (let i = 0; i < PALETTE_SIZE; i++) values.push(decode8(data[8 + i * 2], data[9 + i * 2]));
+      } else {
+        return;
+      }
+
       pendingPaletteReads.delete(component);
       pending.resolve(values);
     }
@@ -458,7 +488,11 @@
 
   function buildPaletteUpload(component) {
     const out = [...PREFIX, CMD.PALETTE_UPLOAD, component];
-    for (let i = 0; i < PALETTE_SIZE; i++) out.push(...encode8(palette[i][component]));
+    if (uses6BitPaletteProtocol()) {
+      for (let i = 0; i < PALETTE_SIZE; i++) out.push(compress8To6(palette[i][component]));
+    } else {
+      for (let i = 0; i < PALETTE_SIZE; i++) out.push(...encode8(palette[i][component]));
+    }
     out.push(0xF7);
     return out;
   }
