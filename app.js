@@ -52,7 +52,7 @@
   let discoveryRequested = false;
   let discoveryTimer = null;
   let cfwProbeToken = 96;
-  const palette = [[0,0,0],[28,28,28],[124,124,124],[252,252,252],[252,72,72],[252,0,0],[84,0,0],[24,0,0],[252,184,104],[252,80,0],[84,28,0],[36,24,0],[252,252,72],[252,252,0],[84,84,0],[24,24,0],[132,252,72],[80,252,0],[28,84,0],[16,40,0],[72,252,72],[0,252,0],[0,84,0],[0,24,0],[72,252,92],[0,252,24],[0,84,12],[0,24,0],[72,252,132],[0,252,84],[0,84,28],[0,28,16],[72,252,180],[0,252,148],[0,84,52],[0,24,16],[72,192,252],[0,164,252],[0,64,80],[0,12,24],[72,132,252],[0,84,252],[0,28,84],[0,4,24],[72,72,252],[0,0,252],[0,0,84],[0,0,24],[132,72,252],[80,0,252],[24,0,96],[12,0,44],[252,72,252],[252,0,252],[84,0,84],[24,0,24],[252,72,132],[252,0,80],[84,0,28],[32,0,16],[252,20,0],[148,52,0],[116,80,0],[64,96,0],[0,56,0],[0,84,52],[0,80,124],[0,0,252],[0,68,76],[36,0,200],[124,124,124],[28,28,28],[252,0,0],[184,252,44],[172,232,4],[96,252,8],[12,136,0],[0,252,132],[0,164,252],[0,40,252],[60,0,252],[120,0,252],[172,24,120],[60,32,0],[252,72,0],[132,220,4],[112,252,20],[0,252,0],[56,252,36],[84,252,108],[52,252,200],[88,136,252],[48,80,192],[132,124,228],[208,28,252],[252,0,88],[252,124,0],[180,172,0],[140,252,0],[128,88,4],[56,40,0],[16,72,12],[12,76,52],[20,20,40],[20,28,88],[100,56,24],[164,0,8],[216,80,60],[212,104,24],[252,220,36],[156,220,44],[100,176,12],[28,28,44],[216,252,104],[124,252,184],[152,148,252],[140,100,252],[60,60,60],[112,112,112],[220,252,252],[156,0,0],[52,0,0],[24,204,0],[4,64,0],[180,172,0],[60,48,0],[176,92,0],[72,20,0]];
+  const palette = [[0,0,0],[28,28,28],[124,124,124],[252,252,252],[252,72,72],[252,0,0],[84,0,0],[24,0,0],[252,184,104],[252,80,0],[84,28,0],[36,24,0],[252,252,72],[252,252,0],[84,84,0],[24,24,0],[132,252,72],[80,252,0],[28,84,0],[16,40,0],[72,252,72],[0,252,0],[0,84,0],[0,24,0],[72,252,92],[0,252,24],[0,84,12],[0,24,0],[72,252,132],[0,252,84],[0,84,28],[0,28,16],[72,252,180],[0,252,148],[0,84,52],[0,24,16],[72,192,252],[0,164,252],[0,64,80],[0,12,24],[72,132,252],[0,84,252],[0,28,84],[0,4,24],[72,72,252],[0,0,252],[0,0,84],[0,0,24],[132,72,252],[80,0,252],[24,0,96],[12,0,44],[252,72,252],[252,0,252],[84,0,84],[24,0,24],[252,72,132],[252,0,80],[84,0,28],[32,0,16],[252,20,0],[148,52,0],[116,80,0],[64,96,0],[0,56,0],[0,84,52],[0,80,124],[0,0,252],[0,68,76],[36,0,200],[124,124,124],[28,28,28],[252,0,0],[184,252,44],[172,232,4],[96,252,8],[12,136,0],[0,252,132],[0,164,252],[0,40,252],[60,0,252],[120,0,252],[172,24,120],[60,32,0],[252,72,0],[132,220,4],[112,252,20],[0,252,0],[56,252,36],[84,252,108],[52,252,200],[88,136,252],[48,80,192],[132,124,228],[208,28,252],[252,0,88],[252,124,0],[180,172,0],[140,252,0],[128,88,4],[56,40,0],[16,72,12],[12,76,52],[20,20,40],[20,28,88],[100,56,24],[164,0,8],[216,80,60],[212,104,24],[252,220,36],[156,220,44],[100,176,12],[28,28,44],[216,252,104],[124,252,184],[152,148,252],[140,100,252],[60,60,60],[112,112,112],[220,252,252],[156,0,0],[52,0,0],[24,204,0],[4,64,0],[180,172,0],[60,48,0],[176,92,0],[72,20,0]].map(rgb => rgb.map(compress8To6));
 
   const $ = id => document.getElementById(id);
   const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -84,23 +84,37 @@
     el.style.color = good ? "var(--ok)" : "var(--muted)";
   }
 
-  function toHex(rgb) {
-    return "#" + rgb.map(v => v.toString(16).padStart(2, "0")).join("").toUpperCase();
+  function rgb6ToDisplayRgb(rgb) {
+    return rgb.map(expand6To8);
   }
 
-  function hexToRgb(hex) {
+  function toDisplayHex(rgb6) {
+    const rgb8 = rgb6ToDisplayRgb(rgb6);
+    return "#" + rgb8.map(v => v.toString(16).padStart(2, "0")).join("").toUpperCase();
+  }
+
+  function hexToRgb8(hex) {
     const n = Number.parseInt(hex.slice(1), 16);
     return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+
+  function hexToRgb6(hex) {
+    return hexToRgb8(hex).map(compress8To6);
+  }
+
+  function rgb6Text(rgb6) {
+    return `R ${rgb6[0]} · G ${rgb6[1]} · B ${rgb6[2]}`;
   }
 
   function renderPalette() {
     const grid = $("paletteGrid");
     grid.innerHTML = "";
-    palette.forEach((rgb, index) => {
+    palette.forEach((rgb6, index) => {
+      const rgb8 = rgb6ToDisplayRgb(rgb6);
       const b = document.createElement("button");
       b.className = "swatch" + (index === selectedVelocity ? " selected" : "");
-      b.style.background = `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
-      b.title = `Velocity ${index} · ${toHex(rgb)}`;
+      b.style.background = `rgb(${rgb8[0]}, ${rgb8[1]}, ${rgb8[2]})`;
+      b.title = `Velocity ${index} · ${rgb6Text(rgb6)}`;
       b.addEventListener("click", () => selectVelocity(index));
       grid.appendChild(b);
     });
@@ -109,20 +123,23 @@
   function selectVelocity(index) {
     selectedVelocity = index;
     $("selectedVelocity").textContent = `Velocity ${index}`;
-    const hex = toHex(palette[index]);
-    $("colorPicker").value = hex;
-    $("colorHex").textContent = hex;
+    const rgb6 = palette[index];
+    $("colorPicker").value = toDisplayHex(rgb6);
+    $("colorHex").textContent = rgb6Text(rgb6);
     [...$("paletteGrid").children].forEach((el, i) => el.classList.toggle("selected", i === index));
   }
 
   function updateSelectedColor(hex) {
-    palette[selectedVelocity] = hexToRgb(hex);
-    $("colorHex").textContent = hex.toUpperCase();
+    const rgb6 = hexToRgb6(hex);
+    palette[selectedVelocity] = rgb6;
+    const displayHex = toDisplayHex(rgb6);
+    $("colorPicker").value = displayHex;
+    $("colorHex").textContent = rgb6Text(rgb6);
     const swatch = $("paletteGrid").children[selectedVelocity];
     if (swatch) {
-      const rgb = palette[selectedVelocity];
-      swatch.style.background = `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
-      swatch.title = `Velocity ${selectedVelocity} · ${toHex(rgb)}`;
+      const rgb8 = rgb6ToDisplayRgb(rgb6);
+      swatch.style.background = `rgb(${rgb8[0]}, ${rgb8[1]}, ${rgb8[2]})`;
+      swatch.title = `Velocity ${selectedVelocity} · ${rgb6Text(rgb6)}`;
     }
   }
 
@@ -461,9 +478,9 @@
 
       const values = [];
       if (uses6BitPaletteProtocol() && data.length === 137) {
-        for (let i = 0; i < PALETTE_SIZE; i++) values.push(expand6To8(data[8 + i]));
+        for (let i = 0; i < PALETTE_SIZE; i++) values.push(data[8 + i] & 0x3F);
       } else if (!uses6BitPaletteProtocol() && data.length === 265) {
-        for (let i = 0; i < PALETTE_SIZE; i++) values.push(decode8(data[8 + i * 2], data[9 + i * 2]));
+        for (let i = 0; i < PALETTE_SIZE; i++) values.push(compress8To6(decode8(data[8 + i * 2], data[9 + i * 2])));
       } else {
         return;
       }
@@ -489,9 +506,9 @@
   function buildPaletteUpload(component) {
     const out = [...PREFIX, CMD.PALETTE_UPLOAD, component];
     if (uses6BitPaletteProtocol()) {
-      for (let i = 0; i < PALETTE_SIZE; i++) out.push(compress8To6(palette[i][component]));
+      for (let i = 0; i < PALETTE_SIZE; i++) out.push(palette[i][component] & 0x3F);
     } else {
-      for (let i = 0; i < PALETTE_SIZE; i++) out.push(...encode8(palette[i][component]));
+      for (let i = 0; i < PALETTE_SIZE; i++) out.push(...encode8(expand6To8(palette[i][component])));
     }
     out.push(0xF7);
     return out;
@@ -562,8 +579,12 @@
       const source = Array.isArray(parsed) ? parsed : parsed.colors;
       if (!Array.isArray(source) || source.length !== 128) throw new Error("JSON must contain 128 colors");
       return source.map((entry, index) => {
-        if (Array.isArray(entry) && entry.length >= 3) return entry.slice(0, 3).map(v => Math.max(0, Math.min(255, Number(v) || 0)));
-        if (typeof entry === "string" && /^#[0-9a-f]{6}$/i.test(entry)) return hexToRgb(entry);
+        if (Array.isArray(entry) && entry.length >= 3) {
+          const rgb = entry.slice(0, 3).map(Number);
+          if (rgb.some(v => !Number.isFinite(v) || v < 0 || v > 63)) throw new Error(`RGB value out of range at index ${index}. Expected 0-63.`);
+          return rgb.map(v => Math.round(v) & 0x3F);
+        }
+        if (typeof entry === "string" && /^#[0-9a-f]{6}$/i.test(entry)) return hexToRgb6(entry);
         throw new Error(`Invalid color at index ${index}`);
       });
     }
@@ -577,8 +598,8 @@
       const index = Number(match[1]);
       if (index < 0 || index > 127) continue;
       const rgb = [Number(match[2]), Number(match[3]), Number(match[4])];
-      if (rgb.some(v => v < 0 || v > 255)) throw new Error(`RGB value out of range at index ${index}. Expected 0-255.`);
-      result[index] = rgb;
+      if (rgb.some(v => v < 0 || v > 63)) throw new Error(`RGB value out of range at index ${index}. Expected 0-63.`);
+      result[index] = rgb.map(v => Math.round(v) & 0x3F);
     }
     if (result.some(v => !v)) throw new Error("Palette file must define index 0 through 127.");
     return result;
