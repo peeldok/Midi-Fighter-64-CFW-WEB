@@ -1,0 +1,7 @@
+{
+  "version": "1.12.0",
+  "filename": "mf64_cfw_v1_12.hex",
+  "downloadUrl": "#",
+  "releaseUrl": "#",
+  "notes": "Rotation, Channel 4 custom palette upload/download, configurable button velocity, dual-port Apollo support."
+}
