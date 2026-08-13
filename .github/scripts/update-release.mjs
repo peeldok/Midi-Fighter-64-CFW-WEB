@@ -1,7 +1,7 @@
 import fs from "node:fs";
 
-const owner = process.env.MF64_RELEASE_OWNER || process.env.GITHUB_REPOSITORY_OWNER || "CHANGE_ME";
-const repo = process.env.MF64_RELEASE_REPO || "MF64-CFW";
+const owner = process.env.MF64_RELEASE_OWNER || process.env.GITHUB_REPOSITORY_OWNER || "peeldok";
+const repo = process.env.MF64_RELEASE_REPO || "Midi-Fighter-64-CFW";
 const api = `https://api.github.com/repos/${owner}/${repo}/releases/latest`;
 
 const headers = {
