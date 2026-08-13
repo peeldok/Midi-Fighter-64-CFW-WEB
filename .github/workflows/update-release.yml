@@ -27,13 +27,14 @@ jobs:
 
       - name: Commit release metadata
         run: |
-          if git diff --quiet -- release.json; then
-            echo "release.json is already current."
+          if git diff --quiet -- release.json firmware/latest.hex; then
+            echo "Firmware is already current."
             exit 0
           fi
-
+      
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add release.json
-          git commit -m "Update MF64 CFW release metadata"
+      
+          git add release.json firmware/latest.hex
+          git commit -m "Update MF64 CFW firmware"
           git push
