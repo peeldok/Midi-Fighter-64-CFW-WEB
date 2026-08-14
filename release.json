@@ -1,9 +1,9 @@
 {
-  "version": "1.0.1",
-  "tag": "1.0.1",
-  "filename": "1.0.1.hex",
+  "version": "1.0.0",
+  "tag": "1.0.0",
+  "filename": "1.0.0.hex",
   "downloadUrl": "./firmware/latest.hex",
-  "releaseUrl": "https://github.com/peeldok/Midi-Fighter-64-CFW/releases/tag/1.0.1",
+  "releaseUrl": "https://github.com/peeldok/Midi-Fighter-64-CFW/releases/tag/1.0.0",
   "publishedAt": "2026-08-14T10:47:06Z",
-  "updatedAt": "2026-08-14T10:47:34.264Z"
+  "updatedAt": "2026-08-14T10:51:14.267Z"
 }
