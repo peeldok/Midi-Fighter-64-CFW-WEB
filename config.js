@@ -11,3 +11,7 @@ window.MF64_CONFIG = {
   bootloaderStart: 0x7000,
   flashPageSize: 128
 };
+
+const mf64FirmwareResetScript = document.createElement("script");
+mf64FirmwareResetScript.src = "firmware-reset.js";
+document.body.appendChild(mf64FirmwareResetScript);
