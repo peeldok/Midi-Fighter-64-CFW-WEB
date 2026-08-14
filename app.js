@@ -312,30 +312,51 @@
     setDeviceStatus("MF64 connected", "connected");
   }
 
-  async function discoverMF64ByIdentity(outputs) {
-    for (const output of outputs) {
+  async function probeIdentity(output, timeoutMs = 1000, attempts = 2) {
+    for (let attempt = 0; attempt < attempts; attempt++) {
       identityProbeOutput = output;
       const result = await new Promise(resolve => {
         identityProbeResolve = resolve;
         try {
           output.send(IDENTITY_INQUIRY);
         } catch (_) {
-          identityProbeResolve = null;
+          if (identityProbeResolve === resolve) identityProbeResolve = null;
           resolve(null);
           return;
         }
+
         setTimeout(() => {
           if (identityProbeResolve === resolve) identityProbeResolve = null;
           resolve(null);
-        }, 300);
+        }, timeoutMs);
       });
+
       if (result) {
         identityProbeOutput = null;
         identityProbeResolve = null;
+        return result;
+      }
+
+      identityProbeOutput = null;
+      identityProbeResolve = null;
+      if (attempt + 1 < attempts) await sleep(80);
+    }
+    return null;
+  }
+
+  async function discoverMF64ByIdentity(outputs, preferredOutput = null) {
+    const orderedOutputs = preferredOutput
+      ? [preferredOutput, ...outputs.filter(output => output !== preferredOutput)]
+      : outputs;
+
+    for (const output of orderedOutputs) {
+      const result = await probeIdentity(output);
+      if (result) {
         await classifyLegacyIdentity(result);
         return true;
       }
     }
+
     identityProbeOutput = null;
     identityProbeResolve = null;
     return false;
@@ -368,12 +389,21 @@
     await sleep(500);
     if (detectedFirmwareType === "cfw" && mf64Output) return;
 
-    const identityFound = await discoverMF64ByIdentity(outputs);
+    const namedMf64Output = bootMidiOutput;
+    const identityFound = await discoverMF64ByIdentity(outputs, namedMf64Output);
     if (detectedFirmwareType === "cfw" && mf64Output) return;
 
     if (!identityFound && !mf64Output) {
-      bootMidiOutput = null;
-      setDeviceStatus("MF64 not found", "error");
+      if (namedMf64Output) {
+        bootMidiOutput = namedMf64Output;
+        mf64Output = namedMf64Output;
+        detectedFirmwareType = "legacy";
+        setDeviceControlsVisible(false);
+        setDeviceStatus("MF64 connected · Identity unavailable", "connected");
+      } else {
+        bootMidiOutput = null;
+        setDeviceStatus("MF64 not found", "error");
+      }
     }
   }
 
